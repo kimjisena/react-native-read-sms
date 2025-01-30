@@ -20,7 +20,8 @@ def safeExtGet(prop, fallback) {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'maven'
+// apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 buildscript {
     // The Android Gradle plugin is only required when opening the android folder stand-alone.
@@ -39,7 +40,8 @@ buildscript {
 }
 
 apply plugin: 'com.android.library'
-apply plugin: 'maven'
+// apply plugin: 'maven'
+apply plugin: 'maven-publish'
 
 android {
     compileSdkVersion safeExtGet('compileSdkVersion', DEFAULT_COMPILE_SDK_VERSION)
@@ -109,17 +111,18 @@ afterEvaluate { project ->
     task androidJavadoc(type: Javadoc) {
         source = android.sourceSets.main.java.srcDirs
         classpath += files(android.bootClasspath)
-        classpath += files(project.getConfigurations().getByName('compile').asList())
+        // Solution 1: commented this line out
+        // classpath += files(project.getConfigurations().getByName('compile').asList())
         include '**/*.java'
     }
 
     task androidJavadocJar(type: Jar, dependsOn: androidJavadoc) {
-        classifier = 'javadoc'
+        archiveClassifier = 'javadoc'
         from androidJavadoc.destinationDir
     }
 
     task androidSourcesJar(type: Jar) {
-        classifier = 'sources'
+        archiveClassifier = 'sources'
         from android.sourceSets.main.java.srcDirs
         include '**/*.java'
     }
@@ -140,10 +143,18 @@ afterEvaluate { project ->
 
     task installArchives(type: Upload) {
         configuration = configurations.archives
-        repositories.mavenDeployer {
-            // Deploy to react-native-event-bridge/maven, ready to publish to npm
-            repository url: "file://${projectDir}/../android/maven"
-            configureReactNativePom pom
+        repositories {
+            mavenDeployer {
+                // Deploy to react-native-event-bridge/maven, ready to publish to npm
+                repository url: "file://${projectDir}/../android/maven"
+                configureReactNativePom pom
+            }
         }
     }
 }
+// Solution 2: Uncomment this line 
+// subprojects { subproject ->
+//         if(project['name'] == 'your-package-name'){
+//             project.configurations { compile { } }
+//         }
+// }
