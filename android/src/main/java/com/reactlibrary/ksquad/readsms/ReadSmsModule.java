@@ -11,10 +11,12 @@ import android.telephony.SmsMessage;
 
 import androidx.core.content.ContextCompat;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableMap;
 import com.facebook.react.modules.core.DeviceEventManagerModule;
 
 public class ReadSmsModule extends ReactContextBaseJavaModule {
@@ -67,22 +69,41 @@ public class ReadSmsModule extends ReactContextBaseJavaModule {
         }
     }
 
-    private String getMessageFromMessageIntent(Intent intent) {
+    private WritableMap getMessageFromMessageIntent(Intent intent) {
         final Bundle bundle = intent.getExtras();
-        String message = "";
+        WritableMap messageMap = Arguments.createMap();
         try {
             if (bundle != null) {
                 final Object[] pdusObj = (Object[]) bundle.get("pdus");
                 if (pdusObj != null) {
+                    StringBuilder messageBuilder = new StringBuilder();
+                    String sender = null;
+                    long timestamp = 0;
+                    String serviceCenter = null;
+
                     for (Object aPdusObj : pdusObj) {
                         SmsMessage currentMessage = SmsMessage.createFromPdu((byte[]) aPdusObj);
-                        message = currentMessage.getDisplayMessageBody();
+                        // Concatenate message parts for multi-part SMS
+                        messageBuilder.append(currentMessage.getDisplayMessageBody());
+                        // Get sender and timestamp from the first part
+                        if (sender == null) {
+                            sender = currentMessage.getOriginatingAddress();
+                            timestamp = currentMessage.getTimestampMillis();
+                            serviceCenter = currentMessage.getServiceCenterAddress();
+                        }
+                    }
+
+                    messageMap.putString("body", messageBuilder.toString());
+                    messageMap.putString("sender", sender);
+                    messageMap.putDouble("timestamp", timestamp);
+                    if (serviceCenter != null) {
+                        messageMap.putString("serviceCenter", serviceCenter);
                     }
                 }
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return message;
+        return messageMap;
     }
 }
